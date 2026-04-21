@@ -42,7 +42,7 @@ def build_heatmap(df: pd.DataFrame) -> go.Figure:
                 [1.0, "#00FF88"],
             ],
             hovertemplate="Hora: %{x}h<br>Fecha: %{y}<br>Tiendas: %{z:,.0f}<extra></extra>",
-            colorbar=dict(title="Tiendas", tickfont=dict(color=TEXT), titlefont=dict(color=TEXT)),
+            colorbar=dict(title="Eventos", tickfont=dict(color=TEXT), titlefont=dict(color=TEXT)),
         )
     )
 
