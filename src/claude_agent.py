@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any
 
-import anthropic
+import openai
 import pandas as pd
 from dotenv import load_dotenv
 
@@ -21,59 +21,77 @@ load_dotenv()
 
 TOOLS = [
     {
-        "name": "get_summary_stats",
-        "description": "Obtiene estadísticas generales de disponibilidad de tiendas: fechas, promedios, máximos y mínimos.",
-        "input_schema": {"type": "object", "properties": {}},
+        "type": "function",
+        "function": {
+            "name": "get_summary_stats",
+            "description": "Obtiene estadísticas generales de disponibilidad de tiendas: fechas, promedios, máximos y mínimos.",
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
     {
-        "name": "get_availability_by_hour",
-        "description": "Disponibilidad promedio de tiendas agrupada por hora del día (0-23).",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "date": {"type": "string", "description": "Fecha opcional en formato YYYY-MM-DD para filtrar"}
+        "type": "function",
+        "function": {
+            "name": "get_availability_by_hour",
+            "description": "Disponibilidad promedio de tiendas agrupada por hora del día (0-23).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string", "description": "Fecha opcional en formato YYYY-MM-DD para filtrar"}
+                },
             },
         },
     },
     {
-        "name": "get_availability_by_day",
-        "description": "Disponibilidad promedio de tiendas por día calendario.",
-        "input_schema": {"type": "object", "properties": {}},
+        "type": "function",
+        "function": {
+            "name": "get_availability_by_day",
+            "description": "Disponibilidad promedio de tiendas por día calendario.",
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
     {
-        "name": "get_anomalies",
-        "description": "Detecta caídas o picos anormales en disponibilidad de tiendas.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "threshold_pct": {
-                    "type": "number",
-                    "description": "Porcentaje mínimo de cambio para considerar anomalía (default: 10)",
-                }
+        "type": "function",
+        "function": {
+            "name": "get_anomalies",
+            "description": "Detecta caídas o picos anormales en disponibilidad de tiendas.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "threshold_pct": {
+                        "type": "number",
+                        "description": "Porcentaje mínimo de cambio para considerar anomalía (default: 10)",
+                    }
+                },
             },
         },
     },
     {
-        "name": "compare_time_periods",
-        "description": "Compara disponibilidad entre dos períodos de tiempo.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "period1_start": {"type": "string"},
-                "period1_end": {"type": "string"},
-                "period2_start": {"type": "string"},
-                "period2_end": {"type": "string"},
+        "type": "function",
+        "function": {
+            "name": "compare_time_periods",
+            "description": "Compara disponibilidad entre dos períodos de tiempo.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "period1_start": {"type": "string"},
+                    "period1_end": {"type": "string"},
+                    "period2_start": {"type": "string"},
+                    "period2_end": {"type": "string"},
+                },
+                "required": ["period1_start", "period1_end", "period2_start", "period2_end"],
             },
-            "required": ["period1_start", "period1_end", "period2_start", "period2_end"],
         },
     },
     {
-        "name": "get_peak_hours",
-        "description": "Retorna las mejores y peores horas del día para disponibilidad.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "top_n": {"type": "integer", "description": "Cuántos resultados retornar (default: 5)"}
+        "type": "function",
+        "function": {
+            "name": "get_peak_hours",
+            "description": "Retorna las mejores y peores horas del día para disponibilidad.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "top_n": {"type": "integer", "description": "Cuántos resultados retornar (default: 5)"}
+                },
             },
         },
     },
@@ -86,7 +104,6 @@ Cuando el usuario haga preguntas sobre los datos, usa las herramientas disponibl
 Responde siempre en español, de forma concisa y con insights accionables.
 Cuando encuentres anomalías o patrones interesantes, explica su posible impacto operacional.
 """.strip()
-
 
 
 def execute_tool(tool_name: str, tool_input: dict[str, Any], df: pd.DataFrame) -> str:
@@ -114,70 +131,50 @@ def execute_tool(tool_name: str, tool_input: dict[str, Any], df: pd.DataFrame) -
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
-
-def _extract_text_from_response(response: Any) -> str:
-    text_blocks: list[str] = []
-    for block in response.content:
-        if getattr(block, "type", None) == "text":
-            text_blocks.append(block.text)
-    return "\n".join(text_blocks).strip()
-
-
-
 def chat(messages: list[dict[str, Any]], df: pd.DataFrame) -> tuple[str, list[dict[str, Any]]]:
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    api_key = os.getenv("GROK_API_KEY", "").strip()
     if not api_key:
-        return "No encontré ANTHROPIC_API_KEY en el archivo .env.", []
+        return "No encontré GROK_API_KEY en el archivo .env.", []
 
-    client = anthropic.Anthropic(api_key=api_key)
-
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        tools=TOOLS,
-        messages=messages,
+    client = openai.OpenAI(
+        api_key=api_key,
+        base_url="https://api.x.ai/v1",
     )
 
-    if response.stop_reason != "tool_use":
-        return _extract_text_from_response(response), []
+    all_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
-    assistant_content = []
+    response = client.chat.completions.create(
+        model="grok-3-mini",
+        messages=all_messages,
+        tools=TOOLS,
+        tool_choice="auto",
+    )
+
+    message = response.choices[0].message
     tool_calls: list[dict[str, Any]] = []
-    tool_result_blocks = []
 
-    for block in response.content:
-        if getattr(block, "type", None) == "text":
-            assistant_content.append({"type": "text", "text": block.text})
-        elif getattr(block, "type", None) == "tool_use":
-            assistant_content.append(
-                {
-                    "type": "tool_use",
-                    "id": block.id,
-                    "name": block.name,
-                    "input": block.input,
-                }
-            )
-            tool_calls.append({"name": block.name, "input": block.input})
-            tool_result_blocks.append(
-                {
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": execute_tool(block.name, block.input, df),
-                }
-            )
+    if not message.tool_calls:
+        return message.content or "", []
 
-    second_pass_messages = messages + [
-        {"role": "assistant", "content": assistant_content},
-        {"role": "user", "content": tool_result_blocks},
-    ]
+    for tc in message.tool_calls:
+        tool_calls.append({"name": tc.function.name, "input": tc.function.arguments})
 
-    final_response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
+    all_messages.append(message)
+
+    for tc in message.tool_calls:
+        tool_input = json.loads(tc.function.arguments)
+        tool_result = execute_tool(tc.function.name, tool_input, df)
+        all_messages.append({
+            "role": "tool",
+            "tool_call_id": tc.id,
+            "content": tool_result,
+        })
+
+    final_response = client.chat.completions.create(
+        model="grok-3-mini",
+        messages=all_messages,
         tools=TOOLS,
-        messages=second_pass_messages,
+        tool_choice="auto",
     )
 
-    return _extract_text_from_response(final_response), tool_calls
+    return final_response.choices[0].message.content or "", tool_calls
