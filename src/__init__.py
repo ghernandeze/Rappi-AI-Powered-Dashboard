@@ -1,0 +1,1 @@
+"""Rappi dashboard package."""
