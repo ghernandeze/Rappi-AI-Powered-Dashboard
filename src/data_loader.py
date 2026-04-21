@@ -13,12 +13,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-TIMESTAMP_PATTERN = "%a %b %d %Y %H:%M:%S GMT%z"
+TIMESTAMP_PATTERN = "%a %b %d %Y %H:%M:%S %z"
 
 
 def parse_timestamp(col_name: str) -> pd.Timestamp:
     """Parsea timestamps tipo: Sun Feb 01 2026 06:59:40 GMT-0500."""
     cleaned = re.sub(r"\s*\(.*?\)", "", str(col_name)).strip()
+    cleaned = cleaned.replace("GMT", "")  # %z no acepta prefijo GMT, solo ±HHMM
     return pd.to_datetime(cleaned, format=TIMESTAMP_PATTERN)
 
 
