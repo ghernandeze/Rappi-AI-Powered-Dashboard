@@ -24,20 +24,21 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_summary_stats",
-            "description": "Obtiene estadísticas generales de disponibilidad de tiendas: fechas, promedios, máximos y mínimos.",
-            "parameters": {"type": "object", "properties": {}},
+            "description": "Obtiene estadísticas generales de disponibilidad de tiendas: fechas, promedios, máximos y mínimos. No requiere parámetros.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
     {
         "type": "function",
         "function": {
             "name": "get_availability_by_hour",
-            "description": "Disponibilidad promedio de tiendas agrupada por hora del día (0-23).",
+            "description": "Disponibilidad promedio de tiendas agrupada por hora del día (0-23). Opcionalmente filtra por fecha.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "date": {"type": "string", "description": "Fecha opcional en formato YYYY-MM-DD para filtrar"}
+                    "date": {"type": "string", "description": "Fecha en formato YYYY-MM-DD. Si no se provee, usa todos los días."}
                 },
+                "required": [],
             },
         },
     },
@@ -45,23 +46,24 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_availability_by_day",
-            "description": "Disponibilidad promedio de tiendas por día calendario.",
-            "parameters": {"type": "object", "properties": {}},
+            "description": "Disponibilidad promedio de tiendas por día calendario. No requiere parámetros.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
     {
         "type": "function",
         "function": {
             "name": "get_anomalies",
-            "description": "Detecta caídas o picos anormales en disponibilidad de tiendas.",
+            "description": "Detecta caídas o picos anormales en disponibilidad de tiendas. Usa threshold_pct=10 por defecto.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "threshold_pct": {
                         "type": "number",
-                        "description": "Porcentaje mínimo de cambio para considerar anomalía (default: 10)",
+                        "description": "Porcentaje mínimo de cambio para considerar anomalía. Valor recomendado: 10.",
                     }
                 },
+                "required": [],
             },
         },
     },
@@ -73,10 +75,10 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "period1_start": {"type": "string"},
-                    "period1_end": {"type": "string"},
-                    "period2_start": {"type": "string"},
-                    "period2_end": {"type": "string"},
+                    "period1_start": {"type": "string", "description": "Inicio período 1, formato YYYY-MM-DD HH:MM"},
+                    "period1_end": {"type": "string", "description": "Fin período 1, formato YYYY-MM-DD HH:MM"},
+                    "period2_start": {"type": "string", "description": "Inicio período 2, formato YYYY-MM-DD HH:MM"},
+                    "period2_end": {"type": "string", "description": "Fin período 2, formato YYYY-MM-DD HH:MM"},
                 },
                 "required": ["period1_start", "period1_end", "period2_start", "period2_end"],
             },
@@ -86,12 +88,13 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_peak_hours",
-            "description": "Retorna las mejores y peores horas del día para disponibilidad.",
+            "description": "Retorna las mejores y peores horas del día para disponibilidad de tiendas.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "top_n": {"type": "integer", "description": "Cuántos resultados retornar (default: 5)"}
+                    "top_n": {"type": "integer", "description": "Cuántos resultados retornar. Por defecto 5."}
                 },
+                "required": [],
             },
         },
     },
@@ -132,22 +135,23 @@ def execute_tool(tool_name: str, tool_input: dict[str, Any], df: pd.DataFrame) -
 
 
 def chat(messages: list[dict[str, Any]], df: pd.DataFrame) -> tuple[str, list[dict[str, Any]]]:
-    api_key = os.getenv("GROK_API_KEY", "").strip()
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
-        return "No encontré GROK_API_KEY en el archivo .env.", []
+        return "No encontré GROQ_API_KEY en el archivo .env.", []
 
     client = openai.OpenAI(
         api_key=api_key,
-        base_url="https://api.x.ai/v1",
+        base_url="https://api.groq.com/openai/v1",
     )
 
     all_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
     response = client.chat.completions.create(
-        model="grok-3-mini",
+        model="llama-3.3-70b-versatile",
         messages=all_messages,
         tools=TOOLS,
         tool_choice="auto",
+        parallel_tool_calls=False,
     )
 
     message = response.choices[0].message
@@ -171,10 +175,11 @@ def chat(messages: list[dict[str, Any]], df: pd.DataFrame) -> tuple[str, list[di
         })
 
     final_response = client.chat.completions.create(
-        model="grok-3-mini",
+        model="llama-3.3-70b-versatile",
         messages=all_messages,
         tools=TOOLS,
         tool_choice="auto",
+        parallel_tool_calls=False,
     )
 
     return final_response.choices[0].message.content or "", tool_calls
