@@ -1,73 +1,68 @@
-# 🚀 AI-Powered Dashboard – Disponibilidad de Tiendas
+# Rappi Ops Intelligence Center
 
-## 📌 Descripción
+Dashboard interactivo con chatbot de AI para análisis de disponibilidad de tiendas Rappi — Febrero 2026.
 
-Este proyecto consiste en una aplicación web que analiza datos históricos de disponibilidad de tiendas (online/offline) y los transforma en información útil para toma de decisiones.
+## Requisitos
 
-La aplicación tiene dos componentes principales:
+- Python 3.10+
+- Cuenta en [Groq](https://console.groq.com) (gratuita) para obtener una API key
 
-- 📊 Dashboard interactivo con métricas y visualizaciones  
-- 🤖 Chatbot inteligente que responde preguntas sobre los datos y genera insights  
+## Instalación
 
----
+```bash
+# 1. Clonar el repositorio
+git clone <url-del-repo>
+cd Rappi-AI-Powered-Dashboard
 
-## 🎯 Objetivo
+# 2. Crear entorno virtual
+python -m venv .venv
 
-Convertir datos crudos (archivos CSV) en:
+# 3. Instalar dependencias
+pip install -r requirements.txt
+```
 
-- métricas claras (uptime, downtime, fallos)  
-- visualizaciones entendibles  
-- recomendaciones accionables usando AI  
+## Configuración
 
----
+Crear un archivo `.env` en la raíz del proyecto:
 
-## 🛠 Tecnologías utilizadas
+```
+GROQ_API_KEY=tu_api_key_de_groq
+DATA_PATH=data
+```
 
-- Python  
-- Pandas → procesamiento de datos  
-- Streamlit → interfaz web  
-- Plotly → gráficos interactivos  
-- OpenAI API → chatbot semántico  
+La API key se obtiene gratis en [console.groq.com](https://console.groq.com) → API Keys → Create API Key
 
----
+## Correr la app
 
-## ⚙️ Cómo funciona
+```bash
+streamlit run app.py
+```
 
-### 1. Procesamiento de datos
+Se abre automáticamente en `http://localhost:8501`
 
-Se cargan múltiples archivos CSV con información de disponibilidad y se transforman en un dataset unificado.
 
-Se realizan pasos como:
+## Estructura del proyecto
 
-- limpieza de datos  
-- normalización de fechas  
-- consolidación de archivos  
-- cálculo de métricas por tienda  
+```
+rappi-dashboard/
+├── app.py                  # App principal Streamlit
+├── data/                   # 202 CSVs de disponibilidad (Feb 2026)
+├── src/
+│   ├── data_loader.py      # Carga y procesa los CSVs
+│   ├── analytics.py        # Funciones de análisis (tools del chatbot)
+│   ├── charts.py           # Visualizaciones Plotly
+│   └── claude_agent.py     # Chatbot con tool use (Groq + Llama 3.3)
+├── requirements.txt
+└── .env                    # No incluido en el repo — crear manualmente
+```
 
----
 
-### 2. Dashboard
+## Stack
 
-La app muestra:
-
-- uptime (%) por tienda  
-- tiendas con más fallos  
-- duración promedio offline  
-- patrones por hora o día  
-- filtros por fecha y tienda  
-
----
-
-### 3. Chatbot
-
-El chatbot permite hacer preguntas como:
-
-- ¿Qué tiendas tienen peor disponibilidad?  
-- ¿En qué horas hay más fallos?  
-- ¿Qué tiendas requieren atención urgente?  
-
-Además, responde con:
-
-- insights  
-- recomendaciones  
-- priorización de problemas  
+| Capa | Tecnología |
+|------|-----------|
+| Frontend + Backend | Streamlit |
+| Visualizaciones | Plotly |
+| Procesamiento de datos | Pandas |
+| Chatbot AI | Groq API + Llama 3.3 70B |
+| Tool use | OpenAI SDK (compatible con Groq) |
