@@ -1,4 +1,4 @@
-🚀 AI-Powered Dashboard – Disponibilidad de Tiendas
+###🚀 AI-Powered Dashboard – Disponibilidad de Tiendas
 📌 Descripción
 
 Este proyecto consiste en una aplicación web que analiza datos históricos de disponibilidad de tiendas (online/offline) y los transforma en información útil para toma de decisiones.
