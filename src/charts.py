@@ -137,7 +137,7 @@ def build_kpi_row(df: pd.DataFrame) -> dict[str, Any]:
     anomalies = get_anomalies(df, threshold_pct=10)
     avg = int(round(df["stores"].mean()))
     peak = int(round(df["stores"].max()))
-    low = int(round(df["stores"].min()))
+    low = int(round(df.loc[df["stores"] > 0, "stores"].min()))
 
     peak_row = df.loc[df["stores"].idxmax()]
     low_row = df.loc[df["stores"].idxmin()]

@@ -159,9 +159,9 @@ def main() -> None:
 
     kpis = build_kpi_row(df)
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Tiendas Promedio", kpis["avg_stores"], kpis["avg_delta"])
-    c2.metric("Pico Máximo", kpis["peak_stores"], kpis["peak_delta"])
-    c3.metric("Mínimo Histórico", kpis["min_stores"], kpis["min_delta"])
+    c1.metric("Eventos de Monitoreo Promedio", kpis["avg_stores"], kpis["avg_delta"])
+    c2.metric("Pico de Actividad", kpis["peak_stores"], kpis["peak_delta"])
+    c3.metric("Mínimo Registrado", kpis["min_stores"], kpis["min_delta"])
     c4.metric("Anomalías Detectadas", kpis["anomaly_count"], kpis["anomaly_delta"])
 
     st.plotly_chart(build_heatmap(df), use_container_width=True)
