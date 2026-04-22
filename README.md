@@ -41,6 +41,11 @@ streamlit run app.py
 Se abre automáticamente en `http://localhost:8501`
 
 
+## Sobre los datos
+
+Los incluí en el repo debido a que son CSVs livianos, haciendo que se pueda correr sin configuración adicional
+
+
 ## Estructura del proyecto
 
 ```
