@@ -103,6 +103,7 @@ TOOLS = [
 SYSTEM_PROMPT = """
 Eres un analista de operaciones de Rappi especializado en disponibilidad de tiendas.
 Tienes acceso a datos históricos de febrero 2026 de Colombia.
+Cuando el usuario salude, se despida o haga preguntas fuera del contexto de los datos, responde de forma amable y natural sin usar herramientas — puedes hacer conversación casual, responder preguntas generales o simplemente ser cordial.
 Cuando el usuario haga preguntas sobre los datos, usa las herramientas disponibles para consultar los datos reales.
 Responde siempre en español, de forma concisa y con insights accionables.
 Cuando encuentres anomalías o patrones interesantes, explica su posible impacto operacional.
@@ -110,26 +111,29 @@ Cuando encuentres anomalías o patrones interesantes, explica su posible impacto
 
 
 def execute_tool(tool_name: str, tool_input: dict[str, Any], df: pd.DataFrame) -> str:
-    if tool_name == "get_summary_stats":
-        result = get_summary_stats(df)
-    elif tool_name == "get_availability_by_hour":
-        result = get_availability_by_hour(df, date=tool_input.get("date"))
-    elif tool_name == "get_availability_by_day":
-        result = get_availability_by_day(df)
-    elif tool_name == "get_anomalies":
-        result = get_anomalies(df, threshold_pct=tool_input.get("threshold_pct", 10))
-    elif tool_name == "compare_time_periods":
-        result = compare_time_periods(
-            df,
-            period1_start=tool_input["period1_start"],
-            period1_end=tool_input["period1_end"],
-            period2_start=tool_input["period2_start"],
-            period2_end=tool_input["period2_end"],
-        )
-    elif tool_name == "get_peak_hours":
-        result = get_peak_hours(df, top_n=tool_input.get("top_n", 5))
-    else:
-        result = {"error": f"Tool desconocida: {tool_name}"}
+    try:
+        if tool_name == "get_summary_stats":
+            result = get_summary_stats(df)
+        elif tool_name == "get_availability_by_hour":
+            result = get_availability_by_hour(df, date=tool_input.get("date"))
+        elif tool_name == "get_availability_by_day":
+            result = get_availability_by_day(df)
+        elif tool_name == "get_anomalies":
+            result = get_anomalies(df, threshold_pct=tool_input.get("threshold_pct", 10))
+        elif tool_name == "compare_time_periods":
+            result = compare_time_periods(
+                df,
+                period1_start=tool_input.get("period1_start", ""),
+                period1_end=tool_input.get("period1_end", ""),
+                period2_start=tool_input.get("period2_start", ""),
+                period2_end=tool_input.get("period2_end", ""),
+            )
+        elif tool_name == "get_peak_hours":
+            result = get_peak_hours(df, top_n=tool_input.get("top_n", 5))
+        else:
+            result = {"error": f"Tool desconocida: {tool_name}"}
+    except Exception as e:
+        result = {"error": str(e), "tool": tool_name, "input": tool_input}
 
     return json.dumps(result, ensure_ascii=False, default=str)
 
@@ -158,7 +162,7 @@ def chat(messages: list[dict[str, Any]], df: pd.DataFrame) -> tuple[str, list[di
     tool_calls: list[dict[str, Any]] = []
 
     if not message.tool_calls:
-        return message.content or "", []
+        return message.content or "No pude procesar esa consulta. Intenta reformular la pregunta.", []
 
     for tc in message.tool_calls:
         tool_calls.append({"name": tc.function.name, "input": tc.function.arguments})
@@ -166,7 +170,7 @@ def chat(messages: list[dict[str, Any]], df: pd.DataFrame) -> tuple[str, list[di
     all_messages.append(message)
 
     for tc in message.tool_calls:
-        tool_input = json.loads(tc.function.arguments)
+        tool_input = json.loads(tc.function.arguments or "{}") or {}
         tool_result = execute_tool(tc.function.name, tool_input, df)
         all_messages.append({
             "role": "tool",
@@ -182,4 +186,4 @@ def chat(messages: list[dict[str, Any]], df: pd.DataFrame) -> tuple[str, list[di
         parallel_tool_calls=False,
     )
 
-    return final_response.choices[0].message.content or "", tool_calls
+    return final_response.choices[0].message.content or "No pude generar una respuesta. Intenta reformular la pregunta.", tool_calls

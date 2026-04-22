@@ -125,10 +125,11 @@ def compare_time_periods(
     period2_start: str,
     period2_end: str,
 ) -> dict[str, Any]:
-    p1_start = pd.to_datetime(period1_start)
-    p1_end = pd.to_datetime(period1_end)
-    p2_start = pd.to_datetime(period2_start)
-    p2_end = pd.to_datetime(period2_end)
+    tz = df["timestamp"].dt.tz
+    p1_start = pd.to_datetime(period1_start).tz_localize(tz)
+    p1_end = pd.to_datetime(period1_end).tz_localize(tz)
+    p2_start = pd.to_datetime(period2_start).tz_localize(tz)
+    p2_end = pd.to_datetime(period2_end).tz_localize(tz)
 
     period1 = df[(df["timestamp"] >= p1_start) & (df["timestamp"] <= p1_end)]
     period2 = df[(df["timestamp"] >= p2_start) & (df["timestamp"] <= p2_end)]
